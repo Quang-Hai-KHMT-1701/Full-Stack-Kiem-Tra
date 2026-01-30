@@ -32,31 +32,45 @@ public class MatchesController : ControllerBase
     // POST
     // =====================
     [HttpPost]
-    public async Task<IActionResult> Create(CreateMatchDto dto)
+    public async Task<IActionResult> Create([FromBody] CreateMatchDto dto)
     {
-        var match = new Match
+        try
         {
-            ChallengeId = dto.ChallengeId,
-            IsRanked = dto.IsRanked,
-            MatchFormat = dto.MatchFormat,
+            // Validate required fields
+            if (dto.Team1_Player1Id == 0 || dto.Team2_Player1Id == 0)
+            {
+                return BadRequest(new { message = "Team1_Player1Id và Team2_Player1Id là bắt buộc" });
+            }
 
-            Team1_Player1Id = dto.Team1_Player1Id,
-            Team1_Player2Id = dto.Team1_Player2Id,
+            var match = new Match
+            {
+                ChallengeId = dto.ChallengeId,
+                IsRanked = dto.IsRanked,
+                MatchFormat = dto.MatchFormat,
+                Date = dto.MatchDate ?? DateTime.Now,
 
-            Team2_Player1Id = dto.Team2_Player1Id,
-            Team2_Player2Id = dto.Team2_Player2Id,
+                Team1_Player1Id = dto.Team1_Player1Id,
+                Team1_Player2Id = dto.Team1_Player2Id,
 
-            WinningSide = dto.WinningSide
-        };
+                Team2_Player1Id = dto.Team2_Player1Id,
+                Team2_Player2Id = dto.Team2_Player2Id,
 
-        _context.Matches.Add(match);
+                WinningSide = dto.WinningSide ?? "A"
+            };
 
-        // 🧠 Cập nhật thống kê
-        await UpdateMemberStats(match);
+            _context.Matches.Add(match);
 
-        await _context.SaveChangesAsync();
+            // 🧠 Cập nhật thống kê
+            await UpdateMemberStats(match);
 
-        return Ok(match);
+            await _context.SaveChangesAsync();
+
+            return Ok(match);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi tạo trận đấu", error = ex.Message });
+        }
     }
 
     private async Task UpdateMemberStats(Match match)

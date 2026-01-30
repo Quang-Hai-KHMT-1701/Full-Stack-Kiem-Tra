@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # SQL Server Database
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: pcm-db
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Password123
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - pcm-db-data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Password123 -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - pcm-network
+
+  # Backend API
+  api:
+    build:
+      context: ./PCM.Api
+      dockerfile: Dockerfile
+    container_name: pcm-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=db;Database=PCM;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;
+      - JwtSettings__Secret=YourSuperSecretKeyForJWT123456789012345678901234567890
+      - JwtSettings__Issuer=PCM.Api
+      - JwtSettings__Audience=PCM.Frontend
+      - JwtSettings__ExpirationInMinutes=1440
+    ports:
+      - "5211:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - pcm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./PCM.FE
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:5211
+    container_name: pcm-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    networks:
+      - pcm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  pcm-network:
+    driver: bridge
+
+volumes:
+  pcm-db-data:
+    driver: local

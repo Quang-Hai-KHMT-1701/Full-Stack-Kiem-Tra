@@ -1,0 +1,102 @@
+version: "3.8"
+
+services:
+  # SQL Server Database
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: pcm-db-prod
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${DB_SA_PASSWORD}
+      - MSSQL_PID=Express
+    volumes:
+      - pcm-db-data:/var/opt/mssql
+      - ./backup:/backup
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${DB_SA_PASSWORD}" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+    networks:
+      - pcm-network
+    restart: always
+
+  # Backend API
+  api:
+    build:
+      context: ./PCM.Api
+      dockerfile: Dockerfile
+    container_name: pcm-api-prod
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=${CONNECTION_STRING}
+      - JwtSettings__Secret=${JWT_SECRET}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - JwtSettings__ExpirationInMinutes=${JWT_EXPIRATION_MINUTES:-1440}
+      - Cors__AllowedOrigins__0=https://tiemcamdo.linkpc.net
+      - Cors__AllowedOrigins__1=https://www.tiemcamdo.linkpc.net
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - pcm-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./PCM.FE
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${API_URL}
+    container_name: pcm-frontend-prod
+    depends_on:
+      - api
+    networks:
+      - pcm-network
+    restart: always
+
+  # Nginx Reverse Proxy with SSL
+  nginx:
+    image: nginx:alpine
+    container_name: pcm-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/conf:/etc/nginx/ssl:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - pcm-network
+    restart: always
+
+  # Certbot for SSL
+  certbot:
+    image: certbot/certbot
+    container_name: pcm-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - pcm-network
+
+networks:
+  pcm-network:
+    driver: bridge
+
+volumes:
+  pcm-db-data:
+    driver: local

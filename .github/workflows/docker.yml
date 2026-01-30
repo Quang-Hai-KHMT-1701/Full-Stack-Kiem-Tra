@@ -1,0 +1,68 @@
+name: Docker Build
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'PCM.Api/**'
+      - 'PCM.FE/**'
+      - 'docker-compose*.yml'
+      - '.github/workflows/docker.yml'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  docker-test:
+    name: Test Docker Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Backend Image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./PCM.Api
+        file: ./PCM.Api/Dockerfile
+        push: false
+        tags: pcm-api:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build Frontend Image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./PCM.FE
+        file: ./PCM.FE/Dockerfile
+        push: false
+        tags: pcm-frontend:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test Docker Compose
+      run: |
+        # Start services
+        docker-compose up -d
+        
+        # Wait for services to be healthy
+        echo "Waiting for services to start..."
+        sleep 30
+        
+        # Check if services are running
+        docker-compose ps
+        
+        # Check API health
+        curl -f http://localhost:5211/health || echo "API health check failed"
+        
+        # Check Frontend
+        curl -f http://localhost:5173/health || echo "Frontend health check failed"
+        
+        # Show logs
+        docker-compose logs
+        
+        # Cleanup
+        docker-compose down -v

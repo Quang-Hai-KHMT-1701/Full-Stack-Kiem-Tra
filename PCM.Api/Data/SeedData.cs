@@ -9,21 +9,91 @@ namespace PCM.Api.Data
     {
         public static async Task InitializeAsync(
             ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            RoleManager<IdentityRole> roleManager)
         {
             // =========================
-            // SEED USER (ADMIN)
+            // SEED ROLES
             // =========================
-            if (!userManager.Users.Any())
+            string[] roles = { "Admin", "Member", "Referee", "Treasurer" };
+
+            foreach (var role in roles)
             {
-                var admin = new ApplicationUser
+                if (!await roleManager.RoleExistsAsync(role))
+                {
+                    await roleManager.CreateAsync(new IdentityRole(role));
+                }
+            }
+
+            // =========================
+            // SEED USERS WITH ROLES
+            // =========================
+            // Admin
+            var admin = await userManager.FindByEmailAsync("admin@pcm.com");
+            if (admin == null)
+            {
+                admin = new ApplicationUser
                 {
                     UserName = "admin@pcm.com",
                     Email = "admin@pcm.com",
                     EmailConfirmed = true
                 };
-
                 await userManager.CreateAsync(admin, "Admin@123");
+            }
+            if (!await userManager.IsInRoleAsync(admin, "Admin"))
+            {
+                await userManager.AddToRoleAsync(admin, "Admin");
+            }
+
+            // Member
+            var member = await userManager.FindByEmailAsync("member@pcm.com");
+            if (member == null)
+            {
+                member = new ApplicationUser
+                {
+                    UserName = "member@pcm.com",
+                    Email = "member@pcm.com",
+                    EmailConfirmed = true
+                };
+                await userManager.CreateAsync(member, "Member@123");
+            }
+            if (!await userManager.IsInRoleAsync(member, "Member"))
+            {
+                await userManager.AddToRoleAsync(member, "Member");
+            }
+
+            // Referee
+            var referee = await userManager.FindByEmailAsync("referee@pcm.com");
+            if (referee == null)
+            {
+                referee = new ApplicationUser
+                {
+                    UserName = "referee@pcm.com",
+                    Email = "referee@pcm.com",
+                    EmailConfirmed = true
+                };
+                await userManager.CreateAsync(referee, "Referee@123");
+            }
+            if (!await userManager.IsInRoleAsync(referee, "Referee"))
+            {
+                await userManager.AddToRoleAsync(referee, "Referee");
+            }
+
+            // Treasurer
+            var treasurer = await userManager.FindByEmailAsync("treasurer@pcm.com");
+            if (treasurer == null)
+            {
+                treasurer = new ApplicationUser
+                {
+                    UserName = "treasurer@pcm.com",
+                    Email = "treasurer@pcm.com",
+                    EmailConfirmed = true
+                };
+                await userManager.CreateAsync(treasurer, "Treasurer@123");
+            }
+            if (!await userManager.IsInRoleAsync(treasurer, "Treasurer"))
+            {
+                await userManager.AddToRoleAsync(treasurer, "Treasurer");
             }
 
             // =========================

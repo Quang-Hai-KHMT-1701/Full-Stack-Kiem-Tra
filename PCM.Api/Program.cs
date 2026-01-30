@@ -112,11 +112,10 @@ var app = builder.Build();
 // ======================
 // Middleware
 // ======================
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+
+app.UseSwagger();
+app.UseSwaggerUI();
+
 
 app.UseHttpsRedirection();
 
@@ -137,8 +136,9 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<ApplicationDbContext>();
     var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
-    await SeedData.InitializeAsync(context, userManager);
+    await SeedData.InitializeAsync(context, userManager, roleManager);
 }
 
 using (var scope = app.Services.CreateScope())
