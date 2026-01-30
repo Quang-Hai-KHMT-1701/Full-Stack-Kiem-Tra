@@ -41,25 +41,28 @@ export const transactionsApi = {
 }
 
 export const categoriesApi = {
-  getAll() {
-    return api.get('/categories')
+  getAll(params = {}) {
+    return api.get('/transaction-categories', { params })
   },
 
   getById(id) {
-    return api.get(`/categories/${id}`)
+    return api.get(`/transaction-categories/${id}`)
   },
 
   create(data) {
-    return api.post('/categories', data)
+    return api.post('/transaction-categories', data)
   },
 
   update(id, data) {
-    return api.put(`/categories/${id}`, data)
+    return api.put(`/transaction-categories/${id}`, data)
   },
 
   delete(id) {
-    return api.delete(`/categories/${id}`)
+    return api.delete(`/transaction-categories/${id}`)
   }
 }
+
+// Also add to transactionsApi for backward compatibility
+transactionsApi.getCategories = categoriesApi.getAll
 
 export default transactionsApi
