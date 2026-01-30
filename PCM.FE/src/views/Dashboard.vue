@@ -194,9 +194,9 @@
 
 <script setup>
 import { challengesApi } from '@/api/challenges.api'
+import { dashboardApi } from '@/api/dashboard.api'
 import { membersApi } from '@/api/members.api'
 import { newsApi } from '@/api/news.api'
-import { transactionsApi } from '@/api/transactions.api'
 import StatsCard from '@/components/dashboard/StatsCard.vue'
 import TopRanking from '@/components/dashboard/TopRanking.vue'
 import MainLayout from '@/components/layout/MainLayout.vue'
@@ -231,10 +231,17 @@ const currentDate = computed(() => {
 const fetchPinnedNews = async () => {
   loadingNews.value = true
   try {
-    const response = await newsApi.getPinned()
-    pinnedNews.value = response.data?.data || response.data || []
+    const response = await dashboardApi.getPinnedNews()
+    pinnedNews.value = response.data || []
   } catch (error) {
     console.error('Error fetching news:', error)
+    // Fallback to old API
+    try {
+      const response = await newsApi.getPinned()
+      pinnedNews.value = response.data?.data || response.data || []
+    } catch (e) {
+      console.error('Fallback error:', e)
+    }
   } finally {
     loadingNews.value = false
   }
@@ -243,11 +250,19 @@ const fetchPinnedNews = async () => {
 const fetchOpenChallenges = async () => {
   loadingChallenges.value = true
   try {
-    const response = await challengesApi.getAll({ status: 'Open' })
-    openChallenges.value = response.data?.data || response.data || []
+    const response = await dashboardApi.getUpcomingChallenges()
+    openChallenges.value = response.data || []
     stats.value.openChallenges = openChallenges.value.length
   } catch (error) {
     console.error('Error fetching challenges:', error)
+    // Fallback to old API
+    try {
+      const response = await challengesApi.getAll({ status: 'Open' })
+      openChallenges.value = response.data?.data || response.data || []
+      stats.value.openChallenges = openChallenges.value.length
+    } catch (e) {
+      console.error('Fallback error:', e)
+    }
   } finally {
     loadingChallenges.value = false
   }
@@ -256,15 +271,32 @@ const fetchOpenChallenges = async () => {
 const fetchTopMembers = async () => {
   loadingMembers.value = true
   try {
-    const response = await membersApi.getTopRanking(5)
-    topMembers.value = response.data?.data || response.data || []
+    const response = await dashboardApi.getTopMembers(5)
+    topMembers.value = response.data || []
     
-    // Also get total members
-    const allResponse = await membersApi.getAll()
-    const allMembers = allResponse.data?.data || allResponse.data || []
-    stats.value.totalMembers = allMembers.length
+    // Also get total members from stats
+    if (authStore.hasRole('Admin') || authStore.hasRole('Treasurer')) {
+      const statsResponse = await dashboardApi.getStats()
+      if (statsResponse.data) {
+        stats.value.totalMembers = statsResponse.data.members?.total || 0
+        stats.value.openChallenges = statsResponse.data.challenges?.open || 0
+        stats.value.todayBookings = statsResponse.data.bookings?.today || 0
+      }
+    } else {
+      // Fallback for non-admin
+      const allResponse = await membersApi.getAll()
+      const allMembers = allResponse.data?.data || allResponse.data || []
+      stats.value.totalMembers = allMembers.length || allResponse.data?.total || 0
+    }
   } catch (error) {
     console.error('Error fetching members:', error)
+    // Fallback to old API
+    try {
+      const response = await membersApi.getTopRanking(5)
+      topMembers.value = response.data?.data || response.data || []
+    } catch (e) {
+      console.error('Fallback error:', e)
+    }
   } finally {
     loadingMembers.value = false
   }
@@ -278,8 +310,14 @@ const fetchSummary = async () => {
   
   loadingSummary.value = true
   try {
-    const response = await transactionsApi.getSummary()
-    summary.value = response.data || { income: 0, expense: 0, balance: 0 }
+    const response = await dashboardApi.getStats()
+    if (response.data?.finance) {
+      summary.value = {
+        income: response.data.finance.totalIncome || 0,
+        expense: response.data.finance.totalExpense || 0,
+        balance: response.data.finance.balance || 0
+      }
+    }
   } catch (error) {
     console.error('Error fetching summary:', error)
   } finally {

@@ -46,6 +46,13 @@ export const bookingsApi = {
 
   reject(id, reason) {
     return api.post(`/bookings/${id}/reject`, { reason })
+  },
+
+  // Lấy lịch booking theo khoảng thời gian
+  getCalendar(startDate, endDate, courtId = null) {
+    const params = { startDate, endDate }
+    if (courtId) params.courtId = courtId
+    return api.get('/bookings/calendar', { params })
   }
 }
 

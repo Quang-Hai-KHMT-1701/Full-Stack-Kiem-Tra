@@ -4,6 +4,7 @@
 import api from './axios'
 
 export const membersApi = {
+  // Lấy danh sách thành viên với filter, search, pagination
   getAll(params = {}) {
     return api.get('/members', { params })
   },
@@ -22,6 +23,16 @@ export const membersApi = {
 
   delete(id) {
     return api.delete(`/members/${id}`)
+  },
+
+  // Cập nhật trạng thái (kích hoạt/vô hiệu hóa)
+  updateStatus(id, isActive) {
+    return api.patch(`/members/${id}/status`, { isActive })
+  },
+
+  // Cập nhật rank
+  updateRank(id, rankLevel) {
+    return api.patch(`/members/${id}/rank`, { rankLevel })
   },
 
   getTopRanking(limit = 5) {
