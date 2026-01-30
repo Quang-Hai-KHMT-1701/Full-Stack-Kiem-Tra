@@ -129,7 +129,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 // ======================
-// Seed data
+// Apply Migrations & Seed data
 // ======================
 using (var scope = app.Services.CreateScope())
 {
@@ -137,6 +137,20 @@ using (var scope = app.Services.CreateScope())
     var context = services.GetRequiredService<ApplicationDbContext>();
     var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
     var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+
+    // Auto-migrate database on startup
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        logger.LogInformation("Applying database migrations...");
+        await context.Database.MigrateAsync();
+        logger.LogInformation("Database migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating the database.");
+        throw;
+    }
 
     await SeedData.InitializeAsync(context, userManager, roleManager);
 }
