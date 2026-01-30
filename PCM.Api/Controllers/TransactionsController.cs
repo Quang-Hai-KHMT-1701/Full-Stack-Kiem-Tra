@@ -160,26 +160,18 @@ namespace PCM.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Map CategoryId to CategoryName
-            var categoryNames = new Dictionary<int, string>
-            {
-                { 1, "Thu phí thành viên" },
-                { 2, "Thu phí sân" },
-                { 3, "Thu phí giải đấu" },
-                { 4, "Tài trợ" },
-                { 5, "Chi phí bảo trì" },
-                { 6, "Chi phí vận hành" },
-                { 7, "Chi phí giải đấu" },
-                { 8, "Chi phí khác" }
-            };
+            // Lấy CategoryName từ database
+            var category = await _context.TransactionCategories.FindAsync(dto.CategoryId);
+            var categoryName = category?.Name ?? "Khác";
+            var categoryType = category?.Type ?? dto.Type.ToLower();
 
             var transaction = new Transaction
             {
                 Description = dto.Description,
                 Amount = dto.Amount,
-                Type = dto.Type.ToLower(),
+                Type = categoryType,
                 CategoryId = dto.CategoryId,
-                CategoryName = categoryNames.GetValueOrDefault(dto.CategoryId, "Khác"),
+                CategoryName = categoryName,
                 TransactionDate = dto.TransactionDate ?? DateTime.Now,
                 Notes = dto.Notes,
                 MemberId = dto.MemberId,
@@ -205,23 +197,16 @@ namespace PCM.Api.Controllers
             if (transaction == null)
                 return NotFound(new { message = $"Giao dịch với id {id} không tồn tại" });
 
-            var categoryNames = new Dictionary<int, string>
-            {
-                { 1, "Thu phí thành viên" },
-                { 2, "Thu phí sân" },
-                { 3, "Thu phí giải đấu" },
-                { 4, "Tài trợ" },
-                { 5, "Chi phí bảo trì" },
-                { 6, "Chi phí vận hành" },
-                { 7, "Chi phí giải đấu" },
-                { 8, "Chi phí khác" }
-            };
+            // Lấy CategoryName từ database
+            var category = await _context.TransactionCategories.FindAsync(dto.CategoryId);
+            var categoryName = category?.Name ?? "Khác";
+            var categoryType = category?.Type ?? dto.Type.ToLower();
 
             transaction.Description = dto.Description;
             transaction.Amount = dto.Amount;
-            transaction.Type = dto.Type.ToLower();
+            transaction.Type = categoryType;
             transaction.CategoryId = dto.CategoryId;
-            transaction.CategoryName = categoryNames.GetValueOrDefault(dto.CategoryId, "Khác");
+            transaction.CategoryName = categoryName;
             transaction.TransactionDate = dto.TransactionDate ?? transaction.TransactionDate;
             transaction.Notes = dto.Notes;
             transaction.MemberId = dto.MemberId;

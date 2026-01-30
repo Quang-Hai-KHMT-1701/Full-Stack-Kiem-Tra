@@ -179,7 +179,7 @@ namespace PCM.Api.Controllers
         // =========================
         [HttpPatch("{id}/status")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusDto dto)
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateNewsStatusDto dto)
         {
             var news = await _context.News.FindAsync(id);
             if (news == null)
@@ -214,7 +214,7 @@ namespace PCM.Api.Controllers
         public bool IsPinned { get; set; }
     }
 
-    public class UpdateStatusDto
+    public class UpdateNewsStatusDto
     {
         public string Status { get; set; } = "Published";
     }
