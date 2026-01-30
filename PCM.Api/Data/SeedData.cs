@@ -26,75 +26,50 @@ namespace PCM.Api.Data
             }
 
             // =========================
-            // SEED USERS WITH ROLES
+            // SEED USERS WITH ROLES AND MEMBERS
             // =========================
-            // Admin
-            var admin = await userManager.FindByEmailAsync("admin@pcm.com");
-            if (admin == null)
-            {
-                admin = new ApplicationUser
-                {
-                    UserName = "admin@pcm.com",
-                    Email = "admin@pcm.com",
-                    EmailConfirmed = true
-                };
-                await userManager.CreateAsync(admin, "Admin@123");
-            }
-            if (!await userManager.IsInRoleAsync(admin, "Admin"))
-            {
-                await userManager.AddToRoleAsync(admin, "Admin");
-            }
 
-            // Member
-            var member = await userManager.FindByEmailAsync("member@pcm.com");
-            if (member == null)
-            {
-                member = new ApplicationUser
-                {
-                    UserName = "member@pcm.com",
-                    Email = "member@pcm.com",
-                    EmailConfirmed = true
-                };
-                await userManager.CreateAsync(member, "Member@123");
-            }
-            if (!await userManager.IsInRoleAsync(member, "Member"))
-            {
-                await userManager.AddToRoleAsync(member, "Member");
-            }
+            // Admin
+            var adminUser = await CreateUserWithMember(
+                userManager, context,
+                "admin@pcm.com", "Admin@123", "Admin",
+                "Quản trị viên", "0901234567");
+
+            // Member 1
+            var member1 = await CreateUserWithMember(
+                userManager, context,
+                "member@pcm.com", "Member@123", "Member",
+                "Nguyễn Văn An", "0912345678");
+
+            // Member 2
+            var member2 = await CreateUserWithMember(
+                userManager, context,
+                "player1@pcm.com", "Player@123", "Member",
+                "Trần Thị Bình", "0923456789");
+
+            // Member 3
+            var member3 = await CreateUserWithMember(
+                userManager, context,
+                "player2@pcm.com", "Player@123", "Member",
+                "Lê Văn Cường", "0934567890");
+
+            // Member 4
+            var member4 = await CreateUserWithMember(
+                userManager, context,
+                "player3@pcm.com", "Player@123", "Member",
+                "Phạm Thị Dung", "0945678901");
 
             // Referee
-            var referee = await userManager.FindByEmailAsync("referee@pcm.com");
-            if (referee == null)
-            {
-                referee = new ApplicationUser
-                {
-                    UserName = "referee@pcm.com",
-                    Email = "referee@pcm.com",
-                    EmailConfirmed = true
-                };
-                await userManager.CreateAsync(referee, "Referee@123");
-            }
-            if (!await userManager.IsInRoleAsync(referee, "Referee"))
-            {
-                await userManager.AddToRoleAsync(referee, "Referee");
-            }
+            var refereeUser = await CreateUserWithMember(
+                userManager, context,
+                "referee@pcm.com", "Referee@123", "Referee",
+                "Trọng tài CLB", "0956789012");
 
             // Treasurer
-            var treasurer = await userManager.FindByEmailAsync("treasurer@pcm.com");
-            if (treasurer == null)
-            {
-                treasurer = new ApplicationUser
-                {
-                    UserName = "treasurer@pcm.com",
-                    Email = "treasurer@pcm.com",
-                    EmailConfirmed = true
-                };
-                await userManager.CreateAsync(treasurer, "Treasurer@123");
-            }
-            if (!await userManager.IsInRoleAsync(treasurer, "Treasurer"))
-            {
-                await userManager.AddToRoleAsync(treasurer, "Treasurer");
-            }
+            var treasurerUser = await CreateUserWithMember(
+                userManager, context,
+                "treasurer@pcm.com", "Treasurer@123", "Treasurer",
+                "Thủ quỹ CLB", "0967890123");
 
             // =========================
             // SEED COURTS
@@ -102,35 +77,97 @@ namespace PCM.Api.Data
             if (!context.Courts.Any())
             {
                 context.Courts.AddRange(
-                    new Court { Name = "Court A", IsActive = true },
-                    new Court { Name = "Court B", IsActive = true }
+                    new Court { Name = "Sân A - Trong nhà", IsActive = true },
+                    new Court { Name = "Sân B - Trong nhà", IsActive = true },
+                    new Court { Name = "Sân C - Ngoài trời", IsActive = true },
+                    new Court { Name = "Sân D - Ngoài trời", IsActive = false }
                 );
+                await context.SaveChangesAsync();
             }
 
             // =========================
-            // SEED MEMBERS
+            // SEED CHALLENGES
             // =========================
-            if (!context.Members.Any())
+            if (!context.Challenges.Any())
             {
-                var user = userManager.Users.First();
-
-                context.Members.Add(
-                    new Member
+                var firstMember = context.Members.FirstOrDefault();
+                context.Challenges.AddRange(
+                    new Challenge
                     {
-                        FullName = "Nguyen Van A",
-                        Email = "a@gmail.com",
-                        PhoneNumber = "0123456789",
-                        IsActive = true,
-                        JoinDate = DateTime.Now,
-                        UserId = user.Id,
-                        TotalMatches = 0,
-                        WinMatches = 0,
-                        RankLevel = 1
+                        Title = "Giải giao hữu cuối tuần",
+                        EntryFee = 50000,
+                        PrizePool = 0,
+                        MaxParticipants = 8,
+                        Status = "Open",
+                        StartDate = DateTime.Now.AddDays(3),
+                        CreatedDate = DateTime.Now,
+                        CreatedById = firstMember?.Id ?? 1
+                    },
+                    new Challenge
+                    {
+                        Title = "Giải đấu mùa xuân 2026",
+                        EntryFee = 100000,
+                        PrizePool = 500000,
+                        MaxParticipants = 16,
+                        Status = "Open",
+                        StartDate = DateTime.Now.AddDays(14),
+                        CreatedDate = DateTime.Now,
+                        CreatedById = firstMember?.Id ?? 1
                     }
                 );
+                await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task<ApplicationUser?> CreateUserWithMember(
+            UserManager<ApplicationUser> userManager,
+            ApplicationDbContext context,
+            string email,
+            string password,
+            string role,
+            string fullName,
+            string phoneNumber)
+        {
+            var user = await userManager.FindByEmailAsync(email);
+
+            if (user == null)
+            {
+                user = new ApplicationUser
+                {
+                    UserName = email,
+                    Email = email,
+                    EmailConfirmed = true
+                };
+                await userManager.CreateAsync(user, password);
             }
 
-            await context.SaveChangesAsync();
+            if (!await userManager.IsInRoleAsync(user, role))
+            {
+                await userManager.AddToRoleAsync(user, role);
+            }
+
+            // Tạo Member profile nếu chưa có
+            var existingMember = context.Members.FirstOrDefault(m => m.UserId == user.Id);
+            if (existingMember == null)
+            {
+                var member = new Member
+                {
+                    FullName = fullName,
+                    Email = email,
+                    PhoneNumber = phoneNumber,
+                    UserId = user.Id,
+                    JoinDate = DateTime.Now,
+                    IsActive = true,
+                    RankLevel = role == "Admin" ? 5.0 : 2.0,
+                    TotalMatches = 0,
+                    WinMatches = 0,
+                    CreatedDate = DateTime.Now
+                };
+                context.Members.Add(member);
+                await context.SaveChangesAsync();
+            }
+
+            return user;
         }
     }
 }

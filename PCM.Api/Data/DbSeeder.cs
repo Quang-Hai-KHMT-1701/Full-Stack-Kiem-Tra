@@ -7,49 +7,79 @@ namespace PCM.Api.Data
     {
         public static void Seed(ApplicationDbContext context)
         {
-            if (!context.Courts.Any())
-            {
-                context.Courts.AddRange(
-                    new Court { Name = "San 1", IsActive = true },
-                    new Court { Name = "San 2", IsActive = true }
-                );
-            }
+            // DbSeeder chỉ seed thêm data demo nếu chưa có
+            // SeedData đã seed Courts và Members cơ bản
 
-            if (!context.Members.Any())
+            // Seed thêm News mẫu nếu chưa có
+            if (!context.News.Any())
             {
-                context.Members.AddRange(
-                    new Member
+                context.News.AddRange(
+                    new News
                     {
-                        FullName = "Nguyen Van A",
-                        Email = "a@gmail.com",
-                        PhoneNumber = "0123456789",
-                        UserId = "demo-user-1",
-                        JoinDate = DateTime.Now,
-                        IsActive = true
+                        Title = "Chào mừng đến với CLB Pickleball",
+                        Content = "Chào mừng tất cả thành viên mới và cũ đến với CLB Pickleball của chúng ta! Hãy cùng nhau tận hưởng môn thể thao tuyệt vời này.",
+                        Summary = "Chào mừng thành viên mới!",
+                        IsPinned = true,
+                        Status = "Published",
+                        CreatedBy = "Admin",
+                        CreatedDate = DateTime.Now.AddDays(-7)
                     },
-                    new Member
+                    new News
                     {
-                        FullName = "Tran Van B",
-                        Email = "b@gmail.com",
-                        PhoneNumber = "0987654321",
-                        UserId = "demo-user-2",
-                        JoinDate = DateTime.Now,
-                        IsActive = true
+                        Title = "Lịch tập luyện tháng 1/2026",
+                        Content = "Lịch tập luyện hàng tuần:\n- Thứ 3, 5: 18:00 - 21:00\n- Thứ 7: 14:00 - 18:00\n- Chủ nhật: 08:00 - 12:00",
+                        Summary = "Cập nhật lịch tập mới",
+                        IsPinned = false,
+                        Status = "Published",
+                        CreatedBy = "Admin",
+                        CreatedDate = DateTime.Now.AddDays(-3)
+                    },
+                    new News
+                    {
+                        Title = "Giải đấu mùa xuân 2026",
+                        Content = "CLB sẽ tổ chức giải đấu mùa xuân vào tháng 2/2026. Các thành viên quan tâm vui lòng đăng ký trước ngày 15/02.",
+                        Summary = "Thông báo giải đấu sắp tới",
+                        IsPinned = true,
+                        Status = "Published",
+                        CreatedBy = "Admin",
+                        CreatedDate = DateTime.Now.AddDays(-1)
                     }
                 );
             }
 
-            if (!context.Challenges.Any())
+            // Seed thêm Transactions mẫu nếu chưa có
+            if (!context.Transactions.Any())
             {
-                context.Challenges.Add(
-                    new Challenge
+                context.Transactions.AddRange(
+                    new Transaction
                     {
-                        Title = "Keo giao huu cuoi tuan",
-                        EntryFee = 50000,
-                        PrizePool = 0,
-                        MaxParticipants = 8,
-                        Status = "Open",
-                        StartDate = DateTime.Now.AddDays(1)
+                        Description = "Thu phí thành viên tháng 1",
+                        Amount = 500000,
+                        Type = "income",
+                        CategoryId = 1,
+                        CategoryName = "Thu phí thành viên",
+                        TransactionDate = DateTime.Now.AddDays(-10),
+                        CreatedBy = "Admin"
+                    },
+                    new Transaction
+                    {
+                        Description = "Thu phí sân ngày 20/01",
+                        Amount = 300000,
+                        Type = "income",
+                        CategoryId = 2,
+                        CategoryName = "Thu phí sân",
+                        TransactionDate = DateTime.Now.AddDays(-5),
+                        CreatedBy = "Admin"
+                    },
+                    new Transaction
+                    {
+                        Description = "Chi phí điện nước tháng 1",
+                        Amount = 200000,
+                        Type = "expense",
+                        CategoryId = 6,
+                        CategoryName = "Chi phí vận hành",
+                        TransactionDate = DateTime.Now.AddDays(-2),
+                        CreatedBy = "Admin"
                     }
                 );
             }
