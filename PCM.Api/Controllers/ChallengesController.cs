@@ -53,17 +53,20 @@ namespace PCM.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(Challenge model)
         {
-            var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            // Try multiple claim types for UserId
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                ?? User.FindFirstValue("sub");
 
             var member = await _context.Members
                 .FirstOrDefaultAsync(x => x.UserId == userId);
 
             if (member == null)
-                return BadRequest("Member not found");
+                return BadRequest($"Member not found for UserId: {userId}");
 
             model.CreatedById = member.Id;
             model.CreatedDate = DateTime.UtcNow;
-            model.Status = "Open";
+            model.Status = model.Status ?? "Open";
 
             _context.Challenges.Add(model);
             await _context.SaveChangesAsync();
@@ -117,7 +120,9 @@ namespace PCM.Api.Controllers
         [HttpPost("{id}/join")]
         public async Task<IActionResult> Join(int id)
         {
-            var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                ?? User.FindFirstValue("sub");
             var member = await _context.Members.FirstOrDefaultAsync(x => x.UserId == userId);
 
             if (member == null)
@@ -158,7 +163,9 @@ namespace PCM.Api.Controllers
         [HttpPost("{id}/leave")]
         public async Task<IActionResult> Leave(int id)
         {
-            var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                ?? User.FindFirstValue("sub");
             var member = await _context.Members.FirstOrDefaultAsync(x => x.UserId == userId);
 
             if (member == null)
