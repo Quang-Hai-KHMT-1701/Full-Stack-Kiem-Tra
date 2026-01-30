@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PCM.Api.Data;
+using PCM.Api.Models.Core;
 
 namespace PCM.Api.Controllers
 {
@@ -6,69 +9,207 @@ namespace PCM.Api.Controllers
     [Route("api/[controller]")]
     public class NewsController : ControllerBase
     {
+        private readonly ApplicationDbContext _context;
+
+        public NewsController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        // =========================
+        // GET: api/news
+        // =========================
         [HttpGet]
-        public IActionResult GetAll([FromQuery] bool? isPinned, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetAll(
+            [FromQuery] bool? isPinned = null,
+            [FromQuery] string? status = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
-            // Return mock pinned news if requested
-            if (isPinned == true)
-            {
-                return Ok(new List<object>
-                {
-                    new
-                    {
-                        id = 1,
-                        title = "Chào mừng đến với CLB Cầu Lông",
-                        content = "Thông tin về CLB và các hoạt động sắp tới.",
-                        isPinned = true,
-                        createdAt = DateTime.Now.AddDays(-7)
-                    }
-                });
-            }
+            var query = _context.News.AsQueryable();
+
+            // Filter by pinned status
+            if (isPinned.HasValue)
+                query = query.Where(n => n.IsPinned == isPinned.Value);
+
+            // Filter by status
+            if (!string.IsNullOrEmpty(status))
+                query = query.Where(n => n.Status == status);
+            else
+                query = query.Where(n => n.Status == "Published"); // Default only show published
+
+            var total = await query.CountAsync();
+
+            var data = await query
+                .OrderByDescending(n => n.IsPinned)
+                .ThenByDescending(n => n.CreatedDate)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
 
             return Ok(new
             {
-                data = new List<object>(),
-                total = 0,
+                data,
+                total,
                 page,
-                pageSize
+                pageSize,
+                totalPages = (int)Math.Ceiling(total / (double)pageSize)
             });
         }
 
+        // =========================
+        // GET: api/news/pinned
+        // =========================
+        [HttpGet("pinned")]
+        public async Task<IActionResult> GetPinned()
+        {
+            var pinnedNews = await _context.News
+                .Where(n => n.IsPinned && n.Status == "Published")
+                .OrderByDescending(n => n.CreatedDate)
+                .Take(5)
+                .ToListAsync();
+
+            return Ok(pinnedNews);
+        }
+
+        // =========================
+        // GET: api/news/{id}
+        // =========================
         [HttpGet("{id}")]
-        public IActionResult GetById(int id)
+        public async Task<IActionResult> GetById(int id)
         {
-            return Ok(new
-            {
-                id,
-                title = "News " + id,
-                content = "Content of news " + id,
-                isPinned = false,
-                createdAt = DateTime.Now
-            });
+            var news = await _context.News.FindAsync(id);
+            if (news == null)
+                return NotFound(new { message = $"Tin tức với id {id} không tồn tại" });
+
+            return Ok(news);
         }
 
+        // =========================
+        // POST: api/news
+        // =========================
         [HttpPost]
-        public IActionResult Create([FromBody] object data)
+        public async Task<IActionResult> Create([FromBody] CreateNewsDto dto)
         {
-            return Ok(new { message = "News created (mock)" });
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var news = new News
+            {
+                Title = dto.Title,
+                Content = dto.Content,
+                Summary = dto.Summary ?? (dto.Content.Length > 200 ? dto.Content.Substring(0, 200) + "..." : dto.Content),
+                ImageUrl = dto.ImageUrl,
+                IsPinned = dto.IsPinned,
+                Status = dto.Status ?? "Published",
+                CreatedBy = dto.CreatedBy,
+                CreatedDate = DateTime.Now
+            };
+
+            _context.News.Add(news);
+            await _context.SaveChangesAsync();
+
+            return Ok(news);
         }
 
+        // =========================
+        // PUT: api/news/{id}
+        // =========================
         [HttpPut("{id}")]
-        public IActionResult Update(int id, [FromBody] object data)
+        public async Task<IActionResult> Update(int id, [FromBody] CreateNewsDto dto)
         {
-            return Ok(new { message = "News updated (mock)" });
+            var news = await _context.News.FindAsync(id);
+            if (news == null)
+                return NotFound(new { message = $"Tin tức với id {id} không tồn tại" });
+
+            news.Title = dto.Title;
+            news.Content = dto.Content;
+            news.Summary = dto.Summary ?? (dto.Content.Length > 200 ? dto.Content.Substring(0, 200) + "..." : dto.Content);
+            news.ImageUrl = dto.ImageUrl;
+            news.IsPinned = dto.IsPinned;
+            news.Status = dto.Status ?? news.Status;
+            news.ModifiedDate = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(news);
         }
 
+        // =========================
+        // DELETE: api/news/{id}
+        // =========================
         [HttpDelete("{id}")]
-        public IActionResult Delete(int id)
+        public async Task<IActionResult> Delete(int id)
         {
+            var news = await _context.News.FindAsync(id);
+            if (news == null)
+                return NotFound(new { message = $"Tin tức với id {id} không tồn tại" });
+
+            _context.News.Remove(news);
+            await _context.SaveChangesAsync();
+
             return NoContent();
         }
 
+        // =========================
+        // PATCH: api/news/{id}/pin
+        // =========================
         [HttpPatch("{id}/pin")]
-        public IActionResult TogglePin(int id, [FromBody] object data)
+        public async Task<IActionResult> TogglePin(int id, [FromBody] TogglePinDto dto)
         {
-            return Ok(new { message = "Pin status updated (mock)" });
+            var news = await _context.News.FindAsync(id);
+            if (news == null)
+                return NotFound(new { message = $"Tin tức với id {id} không tồn tại" });
+
+            news.IsPinned = dto.IsPinned;
+            news.ModifiedDate = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(news);
         }
+
+        // =========================
+        // PATCH: api/news/{id}/status
+        // =========================
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusDto dto)
+        {
+            var news = await _context.News.FindAsync(id);
+            if (news == null)
+                return NotFound(new { message = $"Tin tức với id {id} không tồn tại" });
+
+            if (!new[] { "Draft", "Published", "Archived" }.Contains(dto.Status))
+                return BadRequest(new { message = "Status phải là Draft, Published hoặc Archived" });
+
+            news.Status = dto.Status;
+            news.ModifiedDate = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(news);
+        }
+    }
+
+    // DTOs
+    public class CreateNewsDto
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+        public string? Summary { get; set; }
+        public string? ImageUrl { get; set; }
+        public bool IsPinned { get; set; }
+        public string? Status { get; set; }
+        public string? CreatedBy { get; set; }
+    }
+
+    public class TogglePinDto
+    {
+        public bool IsPinned { get; set; }
+    }
+
+    public class UpdateStatusDto
+    {
+        public string Status { get; set; } = "Published";
     }
 }

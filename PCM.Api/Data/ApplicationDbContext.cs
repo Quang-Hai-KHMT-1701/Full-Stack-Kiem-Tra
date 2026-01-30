@@ -15,6 +15,8 @@ namespace PCM.Api.Data
         public DbSet<Challenge> Challenges { get; set; }
         public DbSet<Match> Matches { get; set; }
         public DbSet<Participant> Participants { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<News> News { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -34,6 +36,8 @@ namespace PCM.Api.Data
             builder.Entity<Challenge>().ToTable("123_Challenges");
             builder.Entity<Match>().ToTable("123_Matches");
             builder.Entity<Participant>().ToTable("123_Participants");
+            builder.Entity<Transaction>().ToTable("123_Transactions");
+            builder.Entity<News>().ToTable("123_News");
 
             // =========================
             // DECIMAL PRECISION
@@ -48,6 +52,10 @@ namespace PCM.Api.Data
 
             builder.Entity<Participant>()
                 .Property(x => x.EntryFeeAmount)
+                .HasPrecision(18, 2);
+
+            builder.Entity<Transaction>()
+                .Property(x => x.Amount)
                 .HasPrecision(18, 2);
 
             // =========================
