@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PCM.Api.Data;
 using PCM.Api.DTOs.Matches;
+using PCM.Api.Enums;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -29,9 +31,10 @@ public class MatchesController : ControllerBase
     }
 
     // =====================
-    // POST
+    // POST - Chỉ Referee hoặc Admin mới được tạo trận
     // =====================
     [HttpPost]
+    [Authorize(Roles = "Admin,Referee")]
     public async Task<IActionResult> Create([FromBody] CreateMatchDto dto)
     {
         try
@@ -60,8 +63,11 @@ public class MatchesController : ControllerBase
 
             _context.Matches.Add(match);
 
-            // 🧠 Cập nhật thống kê
+            // 🧠 Cập nhật thống kê và Rank
             await UpdateMemberStats(match);
+
+            // 🏆 Cập nhật Challenge score nếu thuộc Challenge
+            await UpdateChallengeScore(match);
 
             await _context.SaveChangesAsync();
 
@@ -95,6 +101,7 @@ public class MatchesController : ControllerBase
         {
             m.TotalMatches++;
 
+            bool isWinner = false;
             if ((match.WinningSide == "A" &&
                  (m.Id == match.Team1_Player1Id || m.Id == match.Team1_Player2Id))
                 ||
@@ -102,6 +109,57 @@ public class MatchesController : ControllerBase
                  (m.Id == match.Team2_Player1Id || m.Id == match.Team2_Player2Id)))
             {
                 m.WinMatches++;
+                isWinner = true;
+            }
+
+            // 🎯 Cập nhật RankLevel nếu IsRanked = true
+            if (match.IsRanked)
+            {
+                if (isWinner)
+                {
+                    m.RankLevel += 0.1; // Thắng +0.1
+                }
+                else
+                {
+                    m.RankLevel = Math.Max(0, m.RankLevel - 0.1); // Thua -0.1, không âm
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Cập nhật điểm Challenge nếu match thuộc Challenge TeamBattle
+    /// </summary>
+    private async Task UpdateChallengeScore(Match match)
+    {
+        if (!match.ChallengeId.HasValue)
+            return;
+
+        var challenge = await _context.Challenges.FindAsync(match.ChallengeId.Value);
+        if (challenge == null)
+            return;
+
+        // Chỉ xử lý TeamBattle
+        if (challenge.GameMode != GameMode.TeamBattle)
+            return;
+
+        // Cập nhật điểm theo phe thắng
+        if (match.WinningSide == "Team1")
+        {
+            challenge.CurrentScore_TeamA++;
+        }
+        else if (match.WinningSide == "Team2")
+        {
+            challenge.CurrentScore_TeamB++;
+        }
+
+        // Kiểm tra đạt mốc thắng -> Kết thúc Challenge
+        if (challenge.Config_TargetWins > 0)
+        {
+            if (challenge.CurrentScore_TeamA >= challenge.Config_TargetWins ||
+                challenge.CurrentScore_TeamB >= challenge.Config_TargetWins)
+            {
+                challenge.Status = "Finished";
             }
         }
     }

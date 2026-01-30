@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using PCM.Api.Data;
 using PCM.Api.Models.Core;
@@ -38,6 +39,7 @@ namespace PCM.Api.Controllers
 
         // POST: api/courts
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(Court court)
         {
             _context.Courts.Add(court);
@@ -48,6 +50,7 @@ namespace PCM.Api.Controllers
 
         // PUT: api/courts/5
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, Court court)
         {
             if (id != court.Id)
@@ -61,6 +64,7 @@ namespace PCM.Api.Controllers
 
         // DELETE: api/courts/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var court = await _context.Courts.FindAsync(id);

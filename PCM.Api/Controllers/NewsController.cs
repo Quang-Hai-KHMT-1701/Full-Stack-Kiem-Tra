@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using PCM.Api.Data;
 using PCM.Api.Models.Core;
@@ -89,6 +90,7 @@ namespace PCM.Api.Controllers
         // POST: api/news
         // =========================
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] CreateNewsDto dto)
         {
             if (!ModelState.IsValid)
@@ -116,6 +118,7 @@ namespace PCM.Api.Controllers
         // PUT: api/news/{id}
         // =========================
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, [FromBody] CreateNewsDto dto)
         {
             var news = await _context.News.FindAsync(id);
@@ -139,6 +142,7 @@ namespace PCM.Api.Controllers
         // DELETE: api/news/{id}
         // =========================
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var news = await _context.News.FindAsync(id);
@@ -155,6 +159,7 @@ namespace PCM.Api.Controllers
         // PATCH: api/news/{id}/pin
         // =========================
         [HttpPatch("{id}/pin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> TogglePin(int id, [FromBody] TogglePinDto dto)
         {
             var news = await _context.News.FindAsync(id);
@@ -173,6 +178,7 @@ namespace PCM.Api.Controllers
         // PATCH: api/news/{id}/status
         // =========================
         [HttpPatch("{id}/status")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusDto dto)
         {
             var news = await _context.News.FindAsync(id);

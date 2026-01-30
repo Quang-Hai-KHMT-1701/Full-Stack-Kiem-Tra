@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PCM.Api.Data;
@@ -7,6 +8,7 @@ namespace PCM.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin,Treasurer")]  // Chỉ Admin và Thủ quỹ mới xem được
     public class TransactionsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -99,13 +101,21 @@ namespace PCM.Api.Controllers
             var expense = transactions.Where(t => t.Type == "expense").Sum(t => t.Amount);
             var balance = income - expense;
 
+            // 🚨 Cảnh báo Quỹ âm
+            bool isNegativeBalance = balance < 0;
+            string? warning = isNegativeBalance
+                ? "⚠️ CẢNH BÁO: Quỹ CLB đang bị ÂM! Cần thu thêm hoặc giảm chi."
+                : null;
+
             return Ok(new
             {
                 income,
                 expense,
                 balance,
                 totalTransactions = transactions.Count,
-                period = new { fromDate, toDate }
+                period = new { fromDate, toDate },
+                isNegativeBalance,
+                warning
             });
         }
 

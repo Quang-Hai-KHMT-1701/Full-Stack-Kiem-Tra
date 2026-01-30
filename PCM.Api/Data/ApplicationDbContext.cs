@@ -16,6 +16,7 @@ namespace PCM.Api.Data
         public DbSet<Match> Matches { get; set; }
         public DbSet<Participant> Participants { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<TransactionCategory> TransactionCategories { get; set; }
         public DbSet<News> News { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
@@ -37,6 +38,7 @@ namespace PCM.Api.Data
             builder.Entity<Match>().ToTable("123_Matches");
             builder.Entity<Participant>().ToTable("123_Participants");
             builder.Entity<Transaction>().ToTable("123_Transactions");
+            builder.Entity<TransactionCategory>().ToTable("123_TransactionCategories");
             builder.Entity<News>().ToTable("123_News");
 
             // =========================
